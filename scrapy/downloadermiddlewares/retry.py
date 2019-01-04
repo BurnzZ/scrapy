@@ -58,7 +58,7 @@ class RetryMiddleware(object):
                 and not request.meta.get('dont_retry', False):
             return self._retry(request, exception, spider)
 
-    def _retry(self, request, reason, spider):
+    def _retry(self, request, reason, spider, log_level=logging.DEBUG):
         retries = request.meta.get('retry_times', 0) + 1
 
         retry_times = self.max_retry_times
@@ -68,9 +68,10 @@ class RetryMiddleware(object):
 
         stats = spider.crawler.stats
         if retries <= retry_times:
-            logger.debug("Retrying %(request)s (failed %(retries)d times): %(reason)s",
-                         {'request': request, 'retries': retries, 'reason': reason},
-                         extra={'spider': spider})
+            logger.log(log_level,
+                       "Retrying %(request)s (failed %(retries)d times): %(reason)s",
+                       {'request': request, 'retries': retries, 'reason': reason},
+                       extra={'spider': spider})
             retryreq = request.copy()
             retryreq.meta['retry_times'] = retries
             retryreq.dont_filter = True
@@ -84,6 +85,7 @@ class RetryMiddleware(object):
             return retryreq
         else:
             stats.inc_value('retry/max_reached')
-            logger.debug("Gave up retrying %(request)s (failed %(retries)d times): %(reason)s",
-                         {'request': request, 'retries': retries, 'reason': reason},
-                         extra={'spider': spider})
+            logger.log(log_level,
+                       "Gave up retrying %(request)s (failed %(retries)d times): %(reason)s",
+                       {'request': request, 'retries': retries, 'reason': reason},
+                       extra={'spider': spider})
